@@ -1,5 +1,6 @@
 create or replace PROCEDURE create_tbl_user
 (tblsp_name varchar2,
+ loctn varchar2,
  username varchar2,
  pswd varchar2,
  permission varchar2)
@@ -9,6 +10,7 @@ l_count varchar2(10);
 sql_stat1 varchar2(500);
 user_stat varchar2(500);
 permission_stat varchar2(500);
+
 BEGIN
 --checking the presence of tablespace
     sql_stat := 'select count(*) from user_tablespaces where tablespace_name=upper('''||tblsp_name||''')';
@@ -28,9 +30,10 @@ BEGIN
             RETURN;
         END IF;
   */
+        RETURN;
     ELSE 
         --creating tablespace
-        sql_stat1 := 'create tablespace '||tblsp_name||' datafile ''C:\ORACLE\ORADATA\SAMAN\'||tblsp_name||'_datafile.dbf'' size 10M autoextend on';
+        sql_stat1 := 'create tablespace '||tblsp_name||' datafile '''||loctn||tblsp_name||'_datafile.dbf'' size 10M autoextend on maxsize 20M';
         execute immediate sql_stat1;
         dbms_output.put_line('Successfully created tablespace '||tblsp_name);
     END IF;
@@ -76,7 +79,27 @@ BEGIN
     ELSE
         dbms_output.put_line('Incorrect access. Please select F for full access and S for Select access.');
     END IF;
+    
+    EXCEPTION
+             WHEN INVALID_NUMBER THEN
+                dbms_output.put_line('Invalid number');
+        
+             WHEN OTHERS THEN
 
+            -- INSTR will return the position of the string we are looking for
+            -- otherwise, it will just return 0, hence the search condition :
+
+            IF INSTR(DBMS_UTILITY.FORMAT_ERROR_STACK,'ORA-01658') > 0 THEN
+    
+                DBMS_OUTPUT.PUT_LINE('Tablespace full!');
+                ROLLBACK;
+    
+            ELSE
+    
+                DBMS_OUTPUT.PUT_LINE('ERROR : '||DBMS_UTILITY.FORMAT_ERROR_STACK);
+                ROLLBACK;
+            END IF;
+    
 commit;
 END;
 /
@@ -84,7 +107,33 @@ END;
 -- To execute a procedure
 
 set serveroutput on;
---create_tbl_user(tablespacename, username, passeord, permission access);
-EXEC CREATE_TBL_USER('delete_mesaman','demosaman', 'demosaman','dba');
+--accept new_tblsp prompt 'Say yes or no.Do You want to drop the existing tablespace(incase the tablespace with your given name already exist)';
+--accept permission prompt 'Permission Type: \n Enter F for full access and S for select access';
+--create_tbl_user(tablespacename,loaction, username, passeord, permission access);
+EXEC CREATE_TBL_USER('delete_mesaman101','C:\ORACLE\ORADATA\SAMAN\','demosaman101', 'demosaman101','dba');
 
 */
+/*set serveroutput on;
+
+accept new_tblsp prompt 'Do You want to drop the existing table';
+BEGIN
+    dbms_output.put_line('Your number is &new_tblsp');
+END; 
+*/
+
+/* 
+--delete users automated
+declare 
+i number;
+sql_stat varchar2(500);
+begin
+for i in (select username from all_users where username like upper('demo%'))
+Loop
+    sql_stat := 'DROP USER '||i.username||' cascade';
+    dbms_output.put_line(sql_stat);
+    execute immediate sql_stat;
+end loop;
+dbms_output.put_line('Sucessfully deleted users');
+end;
+*/
+--show user;
