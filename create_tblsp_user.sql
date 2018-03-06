@@ -110,7 +110,7 @@ set serveroutput on;
 --accept new_tblsp prompt 'Say yes or no.Do You want to drop the existing tablespace(incase the tablespace with your given name already exist)';
 --accept permission prompt 'Permission Type: \n Enter F for full access and S for select access';
 --create_tbl_user(tablespacename,loaction, username, passeord, permission access);
-EXEC CREATE_TBL_USER('delete_mesaman101','C:\ORACLE\ORADATA\SAMAN\','demosaman101', 'demosaman101','dba');
+EXEC CREATE_TBL_USER('test','C:\ORACLE\ORADATA\SAMAN\','saman', 'saman','dba');
 
 */
 /*set serveroutput on;
