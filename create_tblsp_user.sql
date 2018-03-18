@@ -111,7 +111,7 @@ set serveroutput on;
 --accept permission prompt 'Permission Type: \n Enter F for full access and S for select access
 --       dba for DBA Access, D for DDL access';
 --create_tbl_user(tablespacename,loaction, username, passeord, permission access);
-EXEC CREATE_TBL_USER('sumintest','C:\ORACLE\ORADATA\SAMAN\','sumin', 'sumin','f');
+EXEC CREATE_TBL_USER('log_ddl','C:\ORACLE\ORADATA\SAMAN\','log_ddl', 'log_ddl','f');
 
 */
 /*set serveroutput on;
