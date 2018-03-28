@@ -119,7 +119,8 @@ SELECT * FROM ALL_SCHEDULER_JOBS;
 -------------------------------------------drop job (if the job is no longer needed )-------------------------------------------
 
 begin
-DBMS_SCHEDULER.DROP_JOB('UPDATE_AUDIT_TABLE_JOB');
+DBMS_SCHEDULER.DROP_JOB('SUNDAY_FULLBACKUP');
 end;
 /
  
+ commit;
