@@ -37,8 +37,23 @@ subpartition by hash(id)
 subpartitions 8
 (partition before_2000 values less than(TO_DATE('01/01/2000', 'DD/MM/YYYY')),
 partition before_2010 values less than (TO_DATE('01/01/2010', 'DD/MM/YYYY')),
-partition before_current_date values less than (TO_DATE(SYSDATE, 'DD/MM/YYYY'))
+partition before_current_date values less than (MAXVALUE)
 );
+
+--LIST PARTITION
+create table test_list_partition(
+id number,
+department varchar2(50),
+join_date date,
+constraint test_list_partition_pk primary key(id)
+)
+partition by list(department)
+(partition backend_dept values ('JAVA', 'DATABASE'),
+partition frontend_dept values ('ANGULAR', 'HTML', 'CSS'),
+partition dept_null values (NULL),
+partition dept_unknown values (DEFAULT)
+);
+
 
 ------------------------------------------------------CREATING SEQUENCE---------------------------------------------------------
 
@@ -66,6 +81,13 @@ create sequence test_COMPOSITE_partition_sq
     nocache
     nocycle;
 
+--TEST_LIST_PARTITION_TABLE_SEQUENCE
+create sequence test_LIST_partition_sq 
+    minvalue 0
+    start with 0
+    increment by 1
+    nocache
+    nocycle;
 ------------------------------------------------INSERTING RECORDS IN TABLE------------------------------------------------------
 
 --INSERT RECORDS INTO TEST_RANGE_PARTITION TABLE
@@ -121,6 +143,7 @@ begin
     end loop;
 end;
 /
+SELECT * FROM TEST_RANGE_PARTITION;
 
 --INSERT RECORDS INTO TEST_HASH_PARTITION TABLE
 declare
@@ -133,7 +156,7 @@ RAND_DEPT VARCHAR2(25);
 begin
     for i in 1..1000
     loop
-        RAND_DAY := DBMS_RANDOM.VALUE(1,30);
+        RAND_DAY := DBMS_RANDOM.VALUE(1,28);
         RAND_MON := DBMS_RANDOM.VALUE(1,12);
         RAND_YR := DBMS_RANDOM.VALUE(1994,2018);
         RAND_DEPT_NO := DBMS_RANDOM.VALUE(1,3);
@@ -165,7 +188,7 @@ begin
     end loop;
 end;
 /
-
+SELECT * FROM TEST_HASH_PARTITION; 
 --INSERT RECORDS INTO TEST_COMPOSITE_PARTITION TABLE
 declare
 RAND_DAY NUMBER(2);
@@ -177,7 +200,7 @@ RAND_DEPT VARCHAR2(25);
 begin
     for i in 1..1000
     loop
-        RAND_DAY := DBMS_RANDOM.VALUE(1,30);
+        RAND_DAY := DBMS_RANDOM.VALUE(1,28);
         RAND_MON := DBMS_RANDOM.VALUE(1,12);
         RAND_YR := DBMS_RANDOM.VALUE(1994,2018);
         RAND_DEPT_NO := DBMS_RANDOM.VALUE(1,3);
@@ -210,26 +233,83 @@ begin
 end;
 /
 
+--INSERT RECORDS INTO TEST_LIST_PARTITION TABLE
+declare
+RAND_DAY NUMBER(2);
+RAND_MON NUMBER(2);
+RAND_YR NUMBER(4);
+RAND_DATE VARCHAR2(25);
+RAND_DEPT_NO NUMBER(1);
+RAND_DEPT VARCHAR2(25);
+begin
+    for i in 1..1000
+    loop
+        RAND_DAY := DBMS_RANDOM.VALUE(1,28);
+        RAND_MON := DBMS_RANDOM.VALUE(1,12);
+        RAND_YR := DBMS_RANDOM.VALUE(1994,2018);
+        RAND_DEPT_NO := DBMS_RANDOM.VALUE(1,5);
+        
+        ----------------------------GET RANDOM DATE----------------------------------
+        RAND_DATE := TO_CHAR(RAND_DAY||'/'||RAND_MON||'/'||RAND_YR);
+        --DBMS_OUTPUT.PUT_LINE(RAND_DATE);
+        
+        ---------------------------GET RAMDOM DEPARTMENT------------------------------
+        CASE RAND_DEPT_NO
+            WHEN 1 THEN RAND_DEPT := 'JAVA';
+            WHEN 2 THEN RAND_DEPT := 'DATABASE';
+            WHEN 3 THEN RAND_DEPT := 'ANGULAR';
+            WHEN 4 THEN RAND_DEPT := 'HTML';
+            WHEN 5 THEN RAND_DEPT := 'CSS';
+            ELSE RAND_DEPT := 'HELPER';
+        END CASE;
+        /* ALTERNATE TO CASE WHEN
+        IF RAND_DEPT_NO = 1 
+            THEN RAND_DEPT := 'JAVA';
+        ELSIF RAND_DEPT_NO = 2 
+            THEN RAND_DEPT := 'DATABASE';
+        ELSIF RAND_DEPT_NO = 3 
+            THEN RAND_DEPT := 'ANGULAR';
+        ELSE RAND_DEPT := 'HELPER';
+        END IF;
+        */
+        --DBMS_OUTPUT.PUT_LINE(RAND_DEPT);
+        
+        insert into test_LIST_partition values (TEST_LIST_PARTITION_SQ.NEXTVAL, RAND_DEPT, TO_DATE(RAND_DATE, 'DD/MM/YYYY'));
+    end loop;
+end;
+/
+/*
 DROP TABLE TEST_hash_partition;
 DROP SEQUENCE test_hash_partition_sq;
 select count(*) from test_partition;
-select * from test_partition;
-
+select * from test_list_partition;
+*/
 -------------------------------------------------CREATING A LOCAL PREFIXED INDEX------------------------------------------------
-create index test_RANGE_partition_salary_idx on test_RANGE_partition(salary) LOCAL;
+create index test_RANGE_part_saL_idx on test_RANGE_partition(salary) LOCAL;
 
 ----------------------------------------------CREATING A LOCAL NON-PREFIXED INDEX-----------------------------------------------
-create index test_RANGE_partition_id_idx on test_RANGE_partition(id) LOCAL;
+create index test_RANGE_part_id_idx on test_RANGE_partition(id) LOCAL;--ERROR BECAUESE ID IS A PRMARY KEY WHICH IS ALREADY INDEXED
 
 -----------------------------------------------CREATING A GLOBAL PREFIXED INDEX-------------------------------------------------
-create index test_RANGE_partition_salary_global_idx on test_RANGE_partition(salary)
-GLOBAL partition by range(salary)
-(partition low_salary values less than (10000) tablespace TEST,
-partition medium_salary values less than (50000) tablespace TEST,
-partition high_salary values less than (150000) tablespace TEST
+create index test_COMPO_part_sal_global_idx on test_COMPOSITE_partition(JOIN_DATE)
+GLOBAL partition by range(JOIN_DATE)
+(partition before_2000 values less than(TO_DATE('01/01/2000', 'DD/MM/YYYY')),
+partition before_2010 values less than (TO_DATE('01/01/2010', 'DD/MM/YYYY')),
+partition before_current_date values less than (MAXVALUE)
 );
+
+----------------------------------------------CREATING A LOCAL PREFIXED INDEX--------------------------------------------------
+create index test_list_part_dept_idx on test_list_partition(department)LOCAL;
+
+-----------------------------------------Global NON-PREFIXED INDEX IS NOT SUPPORTED IN ORACLE-----------------------------------
+
+
 -----------------------------------------------------GATHER TABLE STATS OF TABLE------------------------------------------------
+--'SAMAN' IS THE SCHEMA NAME
 exec dbms_stats.gather_table_stats('SAMAN', 'TEST_RANGE_PARTITION', cascade => TRUE);
+exec dbms_stats.gather_table_stats('SAMAN', 'TEST_HASH_PARTITION', cascade => TRUE);
+exec dbms_stats.gather_table_stats('SAMAN', 'TEST_COMPOSITE_PARTITION', cascade => TRUE);
+exec dbms_stats.gather_table_stats('SAMAN', 'TEST_LIST_PARTITION', cascade => TRUE);
 
 -------------------------------------------------DISPLAY TABLE PARTITION INFO---------------------------------------------------
 SELECT table_name, partition_name, high_value, num_rows FROM user_tab_partitions ORDER BY table_name, partition_name;
