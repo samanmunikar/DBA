@@ -1,0 +1,1 @@
+rman @monday_2_saturday_incremental_backup.bat

@@ -1,0 +1,1 @@
+rman @sunday_fullbackup.bat
