@@ -1,173 +1,446 @@
-create or replace procedure reset_all_objects_from_schema(schema_name in varchar2)
-as
-sql_text varchar2(500);
-begin
+CREATE OR REPLACE PROCEDURE reset_all_objects_from_schema (
+    schema_name IN VARCHAR2
+) AS
+    sql_text   VARCHAR2(500);
+BEGIN
 -------------------------------------------------Disable all Constraints--------------------------------------------------------    
     ----------------------------------Disable all constraints except primary key first------------------------------------------
-    for i in (select constraint_name, table_name, status from all_constraints where owner=upper(schema_name) and constraint_type not in ('P') 
-    and constraint_name not like 'BIN$%'  and table_name not in (select table_name from all_external_tables where owner=upper(schema_name)))
-    loop
-        sql_text := 'alter table '||schema_name||'.'||i.table_name||' disable constraint '||i.constraint_name||'';
+    FOR i IN (
+        SELECT
+            constraint_name,
+            table_name,
+            status
+        FROM
+            all_constraints
+        WHERE
+            owner = upper(schema_name)
+            AND   constraint_type NOT IN (
+                'P'
+            )
+            AND   constraint_name NOT LIKE 'BIN$%'
+            AND   table_name NOT IN (
+                SELECT
+                    table_name
+                FROM
+                    all_external_tables
+                WHERE
+                    owner = upper(schema_name)
+            )
+    ) LOOP
+        sql_text := 'alter table '
+        || schema_name
+        || '.'
+        || i.table_name
+        || ' disable constraint '
+        || i.constraint_name
+        || '';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-    end loop;
+
+        EXECUTE IMMEDIATE sql_text;
+    END LOOP;
     
     ------------------------------------------------Disable primary key---------------------------------------------------
-    for i in (select constraint_name, table_name, status from all_constraints where owner=upper(schema_name) and constraint_type in ('P')
-    and constraint_name not like 'BIN$%' and table_name not in (select table_name from all_external_tables where owner=upper(schema_name)))
-    loop
-        sql_text := 'alter table '||schema_name||'.'||i.table_name||' disable constraint '||i.constraint_name||'';
+
+    FOR i IN (
+        SELECT
+            constraint_name,
+            table_name,
+            status
+        FROM
+            all_constraints
+        WHERE
+            owner = upper(schema_name)
+            AND   constraint_type IN (
+                'P'
+            )
+            AND   constraint_name NOT LIKE 'BIN$%'
+            AND   table_name NOT IN (
+                SELECT
+                    table_name
+                FROM
+                    all_external_tables
+                WHERE
+                    owner = upper(schema_name)
+            )
+    ) LOOP
+        sql_text := 'alter table '
+        || schema_name
+        || '.'
+        || i.table_name
+        || ' disable constraint '
+        || i.constraint_name
+        || '';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-    end loop;
+
+        EXECUTE IMMEDIATE sql_text;
+    END LOOP;
     
 --------------------------------------------------Disable all Triggers----------------------------------------------------------    
-    for i in (select table_name from all_tables where owner=upper(schema_name)
-    and table_name not in (select table_name from all_external_tables where owner=upper(schema_name)))
-    loop
-        sql_text := 'alter table '||schema_name||'.'||i.table_name||' disable all triggers';
+
+    FOR i IN (
+        SELECT
+            table_name
+        FROM
+            all_tables
+        WHERE
+            owner = upper(schema_name)
+            AND   table_name NOT IN (
+                SELECT
+                    table_name
+                FROM
+                    all_external_tables
+                WHERE
+                    owner = upper(schema_name)
+            )
+    ) LOOP
+        sql_text := 'alter table '
+        || schema_name
+        || '.'
+        || i.table_name
+        || ' disable all triggers';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-    end loop;
+
+        EXECUTE IMMEDIATE sql_text;
+    END LOOP;
 
 -------------------------------------------------Truncate all the tables--------------------------------------------------------
-    for i in (select table_name from all_tables where owner=upper(schema_name)
-    and table_name not in (select table_name from all_external_tables where owner=upper(schema_name)))
-    loop
-        sql_text := 'truncate table '||schema_name||'.'||i.table_name||'';
+
+    FOR i IN (
+        SELECT
+            table_name
+        FROM
+            all_tables
+        WHERE
+            owner = upper(schema_name)
+            AND   table_name NOT IN (
+                SELECT
+                    table_name
+                FROM
+                    all_external_tables
+                WHERE
+                    owner = upper(schema_name)
+            )
+    ) LOOP
+        sql_text := 'truncate table '
+        || schema_name
+        || '.'
+        || i.table_name
+        || '';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-    end loop;
+
+        EXECUTE IMMEDIATE sql_text;
+    END LOOP;
 
 ------------------------------------------------Reset all the sequences---------------------------------------------------------
-    for i in (select sequence_name,min_value,increment_by,max_value,cache_size,cycle_flag,order_flag from all_sequences 
-    where sequence_owner=upper(schema_name))
-    loop
+
+    FOR i IN (
+        SELECT
+            sequence_name,
+            min_value,
+            increment_by,
+            max_value,
+            cache_size,
+            cycle_flag,
+            order_flag
+        FROM
+            all_sequences
+        WHERE
+            sequence_owner = upper(schema_name)
+    ) LOOP
         --------------------------------Drop sequence---------------------------
-        sql_text := 'drop sequence '||schema_name||'.'||i.sequence_name||'';
+        sql_text := 'drop sequence '
+        || schema_name
+        || '.'
+        || i.sequence_name
+        || '';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-        
-        if i.cache_size = 0 -- for nocached sequence
-         then 
-                if i.cycle_flag = 'Y' then 
-                        if i.order_flag = 'Y' then
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' nocache '||
-                                ' cycle'||        -- for nocached cycle sequence
-                                ' order';         -- for order sequence    
-                            execute immediate sql_text;
-                        else
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' nocache '||
-                                ' cycle'||        -- for nocached cycle sequence
-                                ' noorder';  -- for noorder sequence    
-                            execute immediate sql_text;
-                        end if;
-                    else
-                        if i.order_flag = 'Y' then
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' nocache '||
-                                ' nocycle'||      -- for nocached nocycle sequence
-                                ' order';          -- for order sequence
-                            execute immediate sql_text;
-                        else
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' nocache '||
-                                ' nocycle'||      -- for nocached nocycle sequence
-                                ' noorder';       -- for no order sequence
-                            execute immediate sql_text;
-                        end if;
-                    end if;
-         else  --for cached sequence
-                if i.cycle_flag = 'Y' then 
-                        if i.order_flag = 'Y' then
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' cache '||i.cache_size||
-                                ' cycle'||        -- for nocached cycle sequence
-                                ' order';  -- for order sequence    
-                            execute immediate sql_text;
-                        else
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' cache '||i.cache_size||
-                                ' cycle'||        -- for nocached cycle sequence
-                                ' noorder';  -- for noorder sequence    
-                            execute immediate sql_text;
-                        end if;
-                    else
-                        if i.order_flag = 'Y' then
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' cache '||i.cache_size||
-                                ' nocycle'||      -- for nocached nocycle sequence
-                                ' order';          -- for order sequence
-                            execute immediate sql_text;
-                        else
-                            sql_text := 'create sequence '||schema_name||'.'||i.sequence_name||' 
-                                minvalue '||i.min_value||
-                                ' maxvalue '||i.max_value||
-                                ' increment by '||i.increment_by||
-                                ' cache '||i.cache_size||
-                                ' nocycle'||      -- for nocached nocycle sequence
-                                ' noorder';       -- for no order sequence
-                            execute immediate sql_text;
-                        end if;
-                    end if;
-        end if;
-    end loop;
+
+        EXECUTE IMMEDIATE sql_text;
+        IF
+            i.cache_size = 0 -- for nocached sequence
+        THEN
+            IF
+                i.cycle_flag = 'Y'
+            THEN
+                IF
+                    i.order_flag = 'Y'
+                THEN
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' nocache '
+                    || ' cycle'
+                    ||        -- for nocached cycle sequence
+                     ' order';         -- for order sequence    
+
+                    EXECUTE IMMEDIATE sql_text;
+                ELSE
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' nocache '
+                    || ' cycle'
+                    ||        -- for nocached cycle sequence
+                     ' noorder';  -- for noorder sequence    
+
+                    EXECUTE IMMEDIATE sql_text;
+                END IF;
+
+            ELSE
+                IF
+                    i.order_flag = 'Y'
+                THEN
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' nocache '
+                    || ' nocycle'
+                    ||      -- for nocached nocycle sequence
+                     ' order';          -- for order sequence
+
+                    EXECUTE IMMEDIATE sql_text;
+                ELSE
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' nocache '
+                    || ' nocycle'
+                    ||      -- for nocached nocycle sequence
+                     ' noorder';       -- for no order sequence
+
+                    EXECUTE IMMEDIATE sql_text;
+                END IF;
+            END IF;
+        ELSE  --for cached sequence
+            IF
+                i.cycle_flag = 'Y'
+            THEN
+                IF
+                    i.order_flag = 'Y'
+                THEN
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' cache '
+                    || i.cache_size
+                    || ' cycle'
+                    ||        -- for nocached cycle sequence
+                     ' order';  -- for order sequence    
+
+                    EXECUTE IMMEDIATE sql_text;
+                ELSE
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' cache '
+                    || i.cache_size
+                    || ' cycle'
+                    ||        -- for nocached cycle sequence
+                     ' noorder';  -- for noorder sequence    
+
+                    EXECUTE IMMEDIATE sql_text;
+                END IF;
+
+            ELSE
+                IF
+                    i.order_flag = 'Y'
+                THEN
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' cache '
+                    || i.cache_size
+                    || ' nocycle'
+                    ||      -- for nocached nocycle sequence
+                     ' order';          -- for order sequence
+
+                    EXECUTE IMMEDIATE sql_text;
+                ELSE
+                    sql_text := 'create sequence '
+                    || schema_name
+                    || '.'
+                    || i.sequence_name
+                    || ' 
+                                minvalue '
+                    || i.min_value
+                    || ' maxvalue '
+                    || i.max_value
+                    || ' increment by '
+                    || i.increment_by
+                    || ' cache '
+                    || i.cache_size
+                    || ' nocycle'
+                    ||      -- for nocached nocycle sequence
+                     ' noorder';       -- for no order sequence
+
+                    EXECUTE IMMEDIATE sql_text;
+                END IF;
+            END IF;
+        END IF;
+
+    END LOOP;
     
 ----------------------------------------------------Enable all constraints------------------------------------------------------
     -----------------------------------------------Enable first primary key constraints-----------------------------------------
-    for i in (select constraint_name, table_name, status from all_constraints where owner=upper(schema_name) and constraint_type in ('P') 
-    and constraint_name not like 'BIN$%' and table_name not in (select table_name from all_external_tables where owner=upper(schema_name)))
-    loop
-        sql_text := 'alter table '||schema_name||'.'||i.table_name||' enable constraint '||i.constraint_name||'';
+
+    FOR i IN (
+        SELECT
+            constraint_name,
+            table_name,
+            status
+        FROM
+            all_constraints
+        WHERE
+            owner = upper(schema_name)
+            AND   constraint_type IN (
+                'P'
+            )
+            AND   constraint_name NOT LIKE 'BIN$%'
+            AND   table_name NOT IN (
+                SELECT
+                    table_name
+                FROM
+                    all_external_tables
+                WHERE
+                    owner = upper(schema_name)
+            )
+    ) LOOP
+        sql_text := 'alter table '
+        || schema_name
+        || '.'
+        || i.table_name
+        || ' enable constraint '
+        || i.constraint_name
+        || '';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-    end loop;
+
+        EXECUTE IMMEDIATE sql_text;
+    END LOOP;
     
     ----------------------------------------------------------Enable other keys-------------------------------------------------
-    for i in (select constraint_name, table_name, status from all_constraints where owner=upper(schema_name) and constraint_type not in ('P') 
-    and constraint_name not like 'BIN$%' and table_name not in (select table_name from all_external_tables where owner=upper(schema_name)))
-    loop
-        sql_text := 'alter table '||schema_name||'.'||i.table_name||' enable constraint '||i.constraint_name||'';
+
+    FOR i IN (
+        SELECT
+            constraint_name,
+            table_name,
+            status
+        FROM
+            all_constraints
+        WHERE
+            owner = upper(schema_name)
+            AND   constraint_type NOT IN (
+                'P'
+            )
+            AND   constraint_name NOT LIKE 'BIN$%'
+            AND   table_name NOT IN (
+                SELECT
+                    table_name
+                FROM
+                    all_external_tables
+                WHERE
+                    owner = upper(schema_name)
+            )
+    ) LOOP
+        sql_text := 'alter table '
+        || schema_name
+        || '.'
+        || i.table_name
+        || ' enable constraint '
+        || i.constraint_name
+        || '';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-    end loop;
+
+        EXECUTE IMMEDIATE sql_text;
+    END LOOP;
 ----------------------------------------------------Enable all triggers---------------------------------------------------------
-    for i in (select table_name from all_tables where owner=upper(schema_name) and table_name not like 'BIN$%'
-    and table_name not in (select table_name from all_external_tables where owner=upper(schema_name)))
-    loop
-        sql_text := 'alter table '||schema_name||'.'||i.table_name||' enable all triggers';
+
+    FOR i IN (
+        SELECT
+            table_name
+        FROM
+            all_tables
+        WHERE
+            owner = upper(schema_name)
+            AND   table_name NOT LIKE 'BIN$%'
+            AND   table_name NOT IN (
+                SELECT
+                    table_name
+                FROM
+                    all_external_tables
+                WHERE
+                    owner = upper(schema_name)
+            )
+    ) LOOP
+        sql_text := 'alter table '
+        || schema_name
+        || '.'
+        || i.table_name
+        || ' enable all triggers';
         --dbms_output.put_line(sql_text);
-        execute immediate sql_text;
-    end loop;
-    
-        dbms_output.put_line('Success!!!!!!!!!!!!');
-        
-end;
+
+        EXECUTE IMMEDIATE sql_text;
+    END LOOP;
+
+    dbms_output.put_line('Success!!!!!!!!!!!!');
+END;
 /
 
-set serveroutput on;
+SET SERVEROUTPUT ON;
 -- reset_all_objects_from_schema('schema_name'); 
-exec reset_all_objects_from_schema('saman');
+EXEC reset_all_objects_from_schema('saman');
