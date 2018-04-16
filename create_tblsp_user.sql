@@ -111,7 +111,7 @@ set serveroutput on;
 --accept permission prompt 'Permission Type: \n Enter F for full access and S for select access
 --       dba for DBA Access, D for DDL access';
 --create_tbl_user(tablespacename,loaction, username, passeord, permission access);
-EXEC CREATE_TBL_USER('logicabeans','C:\ORACLE\ORADATA\LOGICABEANS\','logicabeans', 'logicabeans','f');
+EXEC CREATE_TBL_USER('saman','C:\ORACLE\ORADATA\saman\','saman', 'saman','dba');
 
 */
 /*set serveroutput on;
